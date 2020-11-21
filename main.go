@@ -22,7 +22,7 @@ func main() {
 
 	lp := processor.NewLogProcessor([]string{*term1})
 
-	termMap, err := lp.ReadData(*filename, processor.RoundMinute)
+	termMap, err := lp.ReadData(*filename, processor.RoundSecond)
   if err != nil {
   	fmt.Printf("error while reading file %s\n", err.Error())
   }

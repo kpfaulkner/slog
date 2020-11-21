@@ -18,6 +18,10 @@ const (
 	RoundSecond RoundFactor = iota
 	RoundMinute
 	RoundHour
+
+
+	// misc regexs
+	TIMESTAMPREGEX string = "(19|20\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])T(00|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):(0[0-9]|[0-5][0-9])"
 )
 
 type GraphPoint struct {
@@ -38,11 +42,14 @@ type LogProcessor struct {
 	termDict map[string]map[time.Time]int
 }
 
+var timeStampRegexComp *regexp.Regexp
+
 func NewLogProcessor(terms []string) *LogProcessor {
 	lp := LogProcessor{}
 	lp.termDict = make(map[string]map[time.Time]int)
 	lp.terms = terms
 
+	timeStampRegexComp ,_ = regexp.Compile(TIMESTAMPREGEX)
 	return &lp
 }
 
@@ -70,10 +77,8 @@ func (lp *LogProcessor) findMatchedTerms(line string) []string {
 }
 
 func (lp *LogProcessor) determineTimeStampForLine(line string) (*time.Time, error) {
-	timeStampRegex := "(19|20\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])T(00|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):(0[0-9]|[0-5][0-9])"
-	re,_ := regexp.Compile(timeStampRegex)
 
-	res := re.FindStringSubmatch(line)
+	res := timeStampRegexComp.FindStringSubmatch(line)
 	if res != nil {
 		fmt.Printf("res is %v\n", res)
 
@@ -135,12 +140,10 @@ func (lp *LogProcessor) ReadData(filePath string, rounding RoundFactor) (map[str
 	}
 	defer file.Close()
 
-	counter := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		l := scanner.Text()
 
-		counter++
 		matchedTerms := lp.findMatchedTerms(l)
 		if len(matchedTerms) == 0 {
 			continue

@@ -2,8 +2,12 @@ package processor
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -66,11 +70,43 @@ func (lp *LogProcessor) findMatchedTerms(line string) []string {
 }
 
 func (lp *LogProcessor) determineTimeStampForLine(line string) (*time.Time, error) {
+	timeStampRegex := "(19|20\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])T(00|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):(0[0-9]|[0-5][0-9])"
+	re,_ := regexp.Compile(timeStampRegex)
 
-	now := time.Now()
+	res := re.FindStringSubmatch(line)
+	if res != nil {
+		fmt.Printf("res is %v\n", res)
 
-	// yeah yeah, fake it.
-	return &now, nil
+		year,err := strconv.Atoi(res[1])
+		if err != nil {
+			return nil, err
+		}
+		month,err := strconv.Atoi(res[2])
+		if err != nil {
+			return nil, err
+		}
+		day, err := strconv.Atoi(res[3])
+		if err != nil {
+			return nil, err
+		}
+		hour, err := strconv.Atoi(res[4])
+		if err != nil {
+			return nil, err
+		}
+		minute, err := strconv.Atoi(res[5])
+		if err != nil {
+			return nil, err
+		}
+		second,err := strconv.Atoi(res[6])
+		if err != nil {
+			return nil, err
+		}
+
+		t := time.Date(year, time.Month(month),day,hour,minute,second, 0, time.UTC)
+		return &t, nil
+	}
+
+	return nil, errors.New("no time stamp")
 }
 
 func (lp *LogProcessor) roundTimeStamp(timeStamp time.Time, rounding RoundFactor) time.Time {

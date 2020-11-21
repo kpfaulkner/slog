@@ -34,9 +34,10 @@ type LogProcessor struct {
 	termDict map[string]map[time.Time]int
 }
 
-func NewLogProcessor() *LogProcessor {
+func NewLogProcessor(terms []string) *LogProcessor {
 	lp := LogProcessor{}
 	lp.termDict = make(map[string]map[time.Time]int)
+	lp.terms = terms
 
 	return &lp
 }
@@ -88,18 +89,22 @@ func (lp *LogProcessor) roundTimeStamp(timeStamp time.Time, rounding RoundFactor
 	return timeStamp
 }
 
-func (lp *LogProcessor) ReadData(filePath string, rounding RoundFactor) error {
+func (lp *LogProcessor) ReadData(filePath string, rounding RoundFactor) (map[string]map[time.Time]int,error) {
+
+	termDict := make(map[string]map[time.Time]int)
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
+	counter := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		l := scanner.Text()
 
+		counter++
 		matchedTerms := lp.findMatchedTerms(l)
 		if len(matchedTerms) == 0 {
 			continue
@@ -115,16 +120,16 @@ func (lp *LogProcessor) ReadData(filePath string, rounding RoundFactor) error {
 		roundedTimeStamp := lp.roundTimeStamp(*timeStamp, rounding)
 
 		for _,mt := range matchedTerms {
-			timeDict, ok := lp.termDict[mt]
+			timeDict, ok := termDict[mt]
 			if !ok  {
-				timeDict := make(map[time.Time]int)
+				timeDict = make(map[time.Time]int)
 				lp.termDict[mt] = timeDict
 			}
 
 			timeDict[roundedTimeStamp]++
-			lp.termDict[mt] = timeDict
+			termDict[mt] = timeDict
 		}
 	}
 
-	return nil
+	return termDict, nil
 }

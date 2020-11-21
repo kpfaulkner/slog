@@ -20,11 +20,19 @@ func main() {
 		return
 	}
 
-	lp := processor.NewLogProcessor()
-	err := lp.ReadData(*filename, processor.RoundMinute)
+	lp := processor.NewLogProcessor([]string{*term1})
+
+	termMap, err := lp.ReadData(*filename, processor.RoundMinute)
   if err != nil {
   	fmt.Printf("error while reading file %s\n", err.Error())
   }
 
+  // have a map of terms, times and counts...
+  for k,v := range termMap {
+  	fmt.Printf("term %s\n", k)
+  	for kk,vv := range v {
+  		fmt.Printf("  time %s  count %d\n", kk, vv)
+	  }
+  }
 }
 

@@ -3,10 +3,11 @@ package processor
 import (
 	"bufio"
 	"errors"
-	"fmt"
+	"github.com/kpfaulkner/slog/pkg/graph"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,16 +19,14 @@ const (
 	RoundSecond RoundFactor = iota
 	RoundMinute
 	RoundHour
+	RoundError
 
 
 	// misc regexs
 	TIMESTAMPREGEX string = "(19|20\\d\\d)-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])T(00|0[0-9]|1[0-9]|2[0-3]):([0-9]|[0-5][0-9]):(0[0-9]|[0-5][0-9])"
 )
 
-type GraphPoint struct {
-	timestamp  time.Time
-	errorCount int
-}
+
 
 type LogProcessor struct {
 
@@ -44,10 +43,18 @@ type LogProcessor struct {
 
 var timeStampRegexComp *regexp.Regexp
 
+func trimTerms(terms []string) []string {
+  tt := []string{}
+  for _,t := range terms {
+  	tt = append(tt, strings.TrimSpace(t))
+  }
+	return tt
+}
+
 func NewLogProcessor(terms []string) *LogProcessor {
 	lp := LogProcessor{}
 	lp.termDict = make(map[string]map[time.Time]int)
-	lp.terms = terms
+	lp.terms = trimTerms(terms)
 
 	timeStampRegexComp ,_ = regexp.Compile(TIMESTAMPREGEX)
 	return &lp
@@ -80,7 +87,7 @@ func (lp *LogProcessor) determineTimeStampForLine(line string) (*time.Time, erro
 
 	res := timeStampRegexComp.FindStringSubmatch(line)
 	if res != nil {
-		fmt.Printf("res is %v\n", res)
+		//fmt.Printf("res is %v\n", res)
 
 		year,err := strconv.Atoi(res[1])
 		if err != nil {
@@ -172,3 +179,34 @@ func (lp *LogProcessor) ReadData(filePath string, rounding RoundFactor) (map[str
 
 	return termDict, nil
 }
+
+func (lp *LogProcessor) GenerateGraphData(data map[string]map[time.Time]int) (map[string][]graph.GraphPoint, error){
+
+	perTermResults := make(map[string][]graph.GraphPoint)
+
+	for term,v := range data {
+
+		timeSeries := []graph.GraphPoint{}
+		// loop through per term... since that's what each graph line is.
+		for t, c := range v {
+
+			/*
+			convertedTime,err := convertTimeStamp(t)
+			if err != nil {
+				return nil, err
+			} */
+
+			// keep track of this for sorting purposes.
+			timeSeries = append(timeSeries, graph.GraphPoint{t, c})
+		}
+
+		sort.Slice(timeSeries, func (i int, j int) bool {
+			return timeSeries[i].Timestamp.Before(timeSeries[j].Timestamp)
+		})
+
+		perTermResults[term] = timeSeries
+	}
+
+	return perTermResults, nil
+}
+

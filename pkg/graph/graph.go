@@ -3,12 +3,15 @@ package graph
 import (
 	"fmt"
 	"github.com/wcharczuk/go-chart"
-	"github.com/wcharczuk/go-chart/drawing"
 	"os"
 	"strconv"
 	"time"
 )
 
+type GraphPoint struct {
+	Timestamp  time.Time
+	Count int
+}
 
 func parseInt(str string) int {
 	v, _ := strconv.Atoi(str)
@@ -25,8 +28,8 @@ func convertToSeparateDataSlices(data []GraphPoint) ([]time.Time, []float64) {
 	var yvalues []float64
 
 	for _, m := range data {
-		xvalues = append(xvalues, m.timestamp)
-    yvalues = append(yvalues, float64(m.errorCount))
+		xvalues = append(xvalues, m.Timestamp.Add(-11*time.Hour))  // hack.. need to convert properly.
+    yvalues = append(yvalues, float64(m.Count))
 	}
 	return xvalues, yvalues
 }
@@ -34,17 +37,17 @@ func convertToSeparateDataSlices(data []GraphPoint) ([]time.Time, []float64) {
 func DrawChart(data map[string][]GraphPoint) {
 
 	// list of stroke colours.
-	strokeColours := []drawing.Color {chart.ColorWhite,chart.ColorBlue,chart.ColorCyan,chart.ColorGreen,chart.ColorRed,chart.ColorOrange,chart.ColorYellow,chart.ColorBlack,chart.ColorLightGray,chart.ColorAlternateBlue,chart.ColorAlternateGreen,chart.ColorAlternateGray,chart.ColorAlternateYellow,chart.ColorAlternateLightGray}
+	//strokeColours := []drawing.Color {chart.ColorWhite,chart.ColorBlue,chart.ColorCyan,chart.ColorGreen,chart.ColorRed,chart.ColorOrange,chart.ColorYellow,chart.ColorBlack,chart.ColorLightGray,chart.ColorAlternateBlue,chart.ColorAlternateGreen,chart.ColorAlternateGray,chart.ColorAlternateYellow,chart.ColorAlternateLightGray}
 	seriesList := []chart.Series{}
 	maxY := 0.0
 
 	strokeNumber := 0
 	for k,v := range data {
 		fmt.Printf("graphing %s\n", k)
-		cpuXValues, cpuYValues := convertToSeparateDataSlices(v)
+		xValues, yValues := convertToSeparateDataSlices(v)
 
 		// get maxY for graphing later.
-		for _,y := range cpuYValues {
+		for _,y := range yValues {
 			if y > maxY {
 				maxY = y
 			}
@@ -52,6 +55,7 @@ func DrawChart(data map[string][]GraphPoint) {
 
 		errorSeries := chart.TimeSeries{
 			Name: k,
+			/*
 			Style: chart.Style{
 				Show:        true,
 				StrokeColor: strokeColours[strokeNumber],
@@ -60,9 +64,9 @@ func DrawChart(data map[string][]GraphPoint) {
 
 				//FillColor:   chart.ColorBlue.WithAlpha(100),
 
-			},
-			XValues: cpuXValues,
-			YValues: cpuYValues,
+			}, */
+			XValues: xValues,
+			YValues: yValues,
 
 		}
 		strokeNumber++
@@ -83,8 +87,10 @@ func DrawChart(data map[string][]GraphPoint) {
 	fmt.Printf("adj maxY is %f\n", maxY)
 
 	graph := chart.Chart{
+		/*
 		Width:  2280,
 		Height: 720,
+
 		Background: chart.Style{
 			Padding: chart.Box{
 				Top: 50,
@@ -92,9 +98,10 @@ func DrawChart(data map[string][]GraphPoint) {
 		},
 		Canvas:chart.Style {
   		  FillColor:chart.ColorBlack,
-		},
+		},*/
+
 		YAxis: chart.YAxis{
-			Name:      "Errors",
+			Name:      "Count",
 			NameStyle: chart.StyleShow(),
 			Style:     chart.StyleShow(),
 			TickStyle: chart.Style{
@@ -111,6 +118,9 @@ func DrawChart(data map[string][]GraphPoint) {
 		XAxis: chart.XAxis{
 			Style: chart.Style{
 				Show: true,
+			},
+			TickStyle: chart.Style{
+				TextRotationDegrees: 45.0,
 			},
 			ValueFormatter: chart.TimeValueFormatterWithFormat("2006-01-02.15-04-05"),
 			GridMajorStyle: chart.Style{
